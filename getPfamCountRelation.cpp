@@ -3,6 +3,7 @@
 #include <vector>
 #include <list>
 #include<iterator>
+#include <chrono>
 
 using namespace Rcpp;
 
@@ -26,11 +27,27 @@ List getPfamCountRelation(List refList, std::vector<int> orgVec, std::vector<int
     std::vector<int>::iterator pfamCountVecIt;
     std::vector<int>::iterator orgListVecIt;
     
+    std::vector<int>::iterator orgIt;
+    std::vector<int> countVec;
+    std::vector<int> orgV;
+    
+    
+    int dictSize = *std::max_element(orgVec.begin(),orgVec.end());
+    std::vector<int> dict (dictSize,-1);
+    
+    for(int t = 0;t < orgVec.size();t++){
+        dict[orgVec[t]] = t;
+    }
+    
     int i = 0;
     
+
     for(List::iterator refListIt = refList.begin(); refListIt != refList.end(); refListIt++){
         
-        if(*(refListIt) == NULL){
+        List refListList = as<List>((*refListIt));
+        List::iterator orgL_u_countV = refListList.begin();
+        
+        if(refListList.size() == 0){
             if(*next(queryIt,i) != 0){
                 for(int j =0 ;j < exceeding.size();j++){
                     *next(exceedingIt,j) += *next(queryIt,i);
@@ -38,24 +55,32 @@ List getPfamCountRelation(List refList, std::vector<int> orgVec, std::vector<int
             }
         }
         else{
-            pfamCountVecIt = (*refListIt).begin();
-            orgListIt = (*next(refListIt.begin())).begin();
+            countVec = as<std::vector<int> >((*orgL_u_countV));
+            orgL_u_countV++;
+            List orgL = as<List>(*orgL_u_countV);
+            
+            pfamCountVecIt = countVec.begin();
+            orgListIt = orgL.begin();
             int tmp;
             
-            for(int j = 0; j < (*refListIt).size();j++){
+            for(int j = 0; j < countVec.size();j++){
                 
-                for(int n = 0; n < (*orgListIt).size();n++){
+                orgV = as<std::vector<int> >((*orgListIt));
+                
+                for(int n = 0; n < orgV.size();n++){
                     
-                    tmp = (*pfamCountVecIt)[n] - *next(queryIt,i);
+                    tmp = (*pfamCountVecIt) - *next(queryIt,i);
                     
-                    *next(totalIt,(*orgListIt)[n]) += (*pfamCountVecIt)[n];
+                    int dist = dict[orgV[n]];
+                    
+                    
                     if(tmp < 0){
-                        *next(exceedingIt,(*orgListIt)[n]) += -1* tmp;
+                        *next(exceedingIt,dist) += -1* tmp;
                     }
                     else{
-                        *next(missingIt,(*orgListIt)[n]) += tmp;
+                        *next(missingIt,dist) += tmp;
                     }
-                    
+                    *next(totalIt,dist) += (*pfamCountVecIt);
                 }
                 
                 
